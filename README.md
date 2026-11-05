@@ -4,7 +4,11 @@ Windows에서 Amazon S3 / S3 호환 스토리지를 탐색기 네트워크 드�
 
 ## 바로 실행
 
-이 작업 환경에서 만든 ARM64 실행 파일: `artifacts/HarborDrive-win-arm64/HarborDrive.exe`
+Intel / AMD 64비트 Windows용 통합 설치 파일: **`artifacts/HarborDrive-0.1.1-x64-Setup.exe`**
+
+설치 파일 하나를 배포해 실행하면 됩니다. .NET 런타임·x64 rclone·공식 WinFsp MSI가 모두 들어 있어 설치 중 추가 다운로드가 없습니다. Windows 관리자 승인이 필요하며, 호환 WinFsp가 이미 설치되어 있으면 재사용합니다. 시작 메뉴에서 HarborDrive를 일반 사용자 권한으로 실행하세요.
+
+설치·제거·기업 배포 옵션은 [설치 안내](docs/deployment.md)에 있습니다. 이 환경의 ARM64 portable 실행 파일도 `artifacts/HarborDrive-win-arm64/HarborDrive.exe`에 남아 있습니다. portable 폴더로 실행할 때는 다음 순서를 따릅니다.
 
 1. `HarborDrive.exe`를 일반 사용자 권한으로 실행합니다. 배포 폴더 전체를 함께 보관하세요. .NET 런타임은 포함되어 있습니다.
 2. **첫 번째 드라이브 연결하기**에서 Access Key / Secret Key, 리전, 버킷, 경로, 드라이브 문자를 입력합니다. AWS S3는 엔드포인트를 비워둡니다.
@@ -67,8 +71,8 @@ AWS 기본 인증 체인은 rclone/AWS SDK가 지원하는 환경 변수, 공유
 - 디렉터리 캐시는 5분입니다. 외부에서 바뀐 파일 목록을 곧바로 보고 싶으면 **원격 목록 갱신**을 누르세요. 열려 있는 파일의 외부 변경을 병합하지 않습니다.
 - 캐시 용량과 최소 여유 공간은 정리 목표입니다. 사용 중·미전송 파일은 정리하지 않아 목표를 초과할 수 있습니다. 로컬 디스크 여유 공간을 확보하세요.
 - DB, VM 이미지, 다중 작성자 공유 작업처럼 로컬 디스크의 모든 의미론이 필요한 용도에 대한 호환성은 검증하지 않았습니다.
-- 현 버전은 Windows ARM64에서 검증했습니다. x64 소스 빌드를 지원하지만 x64 PC에서 실행 시험은 남아 있습니다.
-- 코드 서명, MSI 설치/제거, 자동 업데이트는 포함하지 않은 portable 초기 버전입니다.
+- ARM64와 x64 실행 검사를 수행했습니다. x64 검사는 ARM64 Windows의 x64 에뮬레이션 환경이며, Intel / AMD 실물 PC와 실제 AWS 계정 시험은 남아 있습니다.
+- x64 통합 설치·제거를 제공합니다. 코드 서명과 자동 업데이트는 아직 포함하지 않습니다.
 
 ## 개발·테스트·배포
 
@@ -80,11 +84,13 @@ PowerShell에서 실행합니다. 개발 도구는 프로젝트의 `.tools`에 �
 .\scripts\test.ps1
 .\scripts\test.ps1 -Integration
 .\scripts\build.ps1 -Publish -Architecture arm64
+.\scripts\build-installer.ps1
+.\scripts\test.ps1 -Integration -Architecture x64
 ```
 
 통합 테스트는 사용자 S3에 접근하지 않습니다. 임시 로컬 `rclone serve s3` 서버와 비어 있는 드라이브 문자를 사용합니다. 테스트 파일과 로그는 `.devdata/test-*`에 남습니다. 이 테스트용 S3 서버는 실제 AWS S3의 모든 동작을 대체하지 않습니다.
 
-x64 패키지는 x64 환경에서 `setup.ps1`, `build.ps1 -Publish -Architecture x64`로 만드세요. 교차 빌드 시 패키지에 대상 아키텍처용 rclone을 넣어야 하며 빌드 스크립트가 확인합니다.
+x64 portable 패키지는 `build.ps1 -Publish -Architecture x64`, 통합 설치 파일은 `build-installer.ps1`로 만듭니다. ARM64 개발 환경에서도 교차 빌드할 수 있습니다. 빌드 스크립트가 대상 아키텍처의 rclone을 자동 준비하고 앱·런타임·rclone의 PE 아키텍처를 검사합니다.
 
 프로젝트별 데이터 격리가 필요하면 `HARBORDRIVE_HOME`을 절대 경로로 설정하세요. 로그인 시작 경로는 실행 중인 EXE의 위치를 등록하므로 배포 폴더 위치를 고정한 후 로그인 실행을 켜세요. 이 기능은 사용자별 레지스트리 Run 항목 `HarborDrive`만 사용합니다.
 

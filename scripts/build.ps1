@@ -1,5 +1,6 @@
 param([ValidateSet('arm64','x64')][string]$Architecture = 'arm64', [switch]$Publish)
 . "$PSScriptRoot\common.ps1"
+. "$PSScriptRoot\dependencies.ps1"
 Push-Location $RepoRoot
 try {
     if (!(Test-Path -LiteralPath $DotnetExe)) { throw 'Run scripts\setup.ps1 first.' }
@@ -7,12 +8,13 @@ try {
     if ($LASTEXITCODE) { throw 'Build failed.' }
     if ($Publish) {
         $PublishPath = Join-Path $RepoRoot "artifacts\HarborDrive-win-$Architecture"
-        & $DotnetExe publish 'src\HarborDrive.App\HarborDrive.App.csproj' -c Release -r "win-$Architecture" --self-contained true -o $PublishPath -p:PublishSingleFile=false
+        $TargetRclone = Get-RcloneBinary $Architecture
+        & $DotnetExe publish 'src\HarborDrive.App\HarborDrive.App.csproj' -c Release -r "win-$Architecture" --self-contained true -o $PublishPath -p:PublishSingleFile=false "-p:RcloneExecutable=$TargetRclone"
         if ($LASTEXITCODE) { throw 'Publish failed.' }
-        # Cross-publishing must include the matching native rclone architecture.
-        $RcloneArch = if ($Architecture -eq 'x64') { 'amd64' } else { 'arm64' }
-        $Version = (& (Join-Path $PublishPath 'tools\rclone.exe') version) -join "`n"
-        if ($Version -notmatch "os/arch: $RcloneArch") { throw 'The rclone binary architecture does not match the package. Run setup on the target architecture or replace tools/rclone.exe with its verified matching build.' }
+        $ExpectedMachine = if ($Architecture -eq 'x64') { 0x8664 } else { 0xAA64 }
+        foreach ($Binary in @('HarborDrive.exe', 'coreclr.dll', 'tools\rclone.exe')) {
+            if ((Get-PeMachine (Join-Path $PublishPath $Binary)) -ne $ExpectedMachine) { throw "Wrong architecture in package: $Binary" }
+        }
         Copy-Item -LiteralPath (Join-Path $RepoRoot 'README.md'),(Join-Path $RepoRoot 'THIRD-PARTY-NOTICES.md') -Destination $PublishPath
         Copy-Item -LiteralPath (Join-Path $RepoRoot 'docs') -Destination $PublishPath -Recurse -Force
         $RuntimeConfig = Get-Content -LiteralPath (Join-Path $PublishPath 'HarborDrive.runtimeconfig.json') -Raw | ConvertFrom-Json

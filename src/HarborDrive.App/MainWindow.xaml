@@ -13,10 +13,10 @@
           <TextBlock Text="백그라운드에서 안전하게" Foreground="#D0E1E7" FontSize="12" />
           <TextBlock Text="창을 닫아도 연결은 유지됩니다." Foreground="#87A6B4" FontSize="11" Margin="0,5,0,20" />
           <Button Content="⚙  설정" Click="Settings_Click" Background="#233F4E" Foreground="White" BorderThickness="0" Margin="0,0,0,8">
-            <Button.ContextMenu><ContextMenu><MenuItem Header="현재 S3 연결 설정" Click="Edit_Click" /><MenuItem Header="추가 S3 연결…" Click="Add_Click" /><Separator /><MenuItem Header="로그 폴더 열기" Click="Logs_Click" /></ContextMenu></Button.ContextMenu>
+            <Button.ContextMenu><ContextMenu><MenuItem Header="현재 S3 연결 설정" Click="Edit_Click" /><MenuItem Header="추가 S3 연결…" Click="Add_Click" /><Separator /><MenuItem Header="로그 폴더 열기" Click="Logs_Click" /><MenuItem Header="정보 · 타사 라이선스" Click="About_Click" /></ContextMenu></Button.ContextMenu>
           </Button>
           <Button Content="모든 연결 해제 후 종료" Click="Exit_Click" Background="Transparent" Foreground="#AFC8D2" BorderThickness="0" FontSize="11" Margin="0" />
-          <TextBlock Text="v0.1.0  ·  Windows ARM64 / x64" Foreground="#678C9F" FontSize="10" Margin="0,18,0,0" />
+          <TextBlock x:Name="VersionText" Foreground="#678C9F" FontSize="10" Margin="0,18,0,0" />
         </StackPanel>
         <ListBox x:Name="DriveList" SelectionChanged="DriveList_SelectionChanged" Background="Transparent" BorderThickness="0" Foreground="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="9,14" /><Setter Property="Margin" Value="0,0,0,6" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="ItemBody" CornerRadius="7" Padding="{TemplateBinding Padding}" Background="Transparent"><ContentPresenter /></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemBody" Property="Background" Value="#2A4B5B" /></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ItemBody" Property="Background" Value="#234452" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>

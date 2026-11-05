@@ -10,6 +10,7 @@ var repo = Path.GetFullPath(args.FirstOrDefault(a => !a.StartsWith("--")) ?? Env
 var testRoot = Path.Combine(repo, ".devdata", "test-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(testRoot);
 var count = 0;
+Console.WriteLine("Test process architecture: " + System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture);
 void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL: " + name); Console.WriteLine("PASS: " + name); count++; }
 void Reject(Action action, string name) { try { action(); } catch (ArgumentException) { Check(true, name); return; } throw new Exception("Expected rejection: " + name); }
 async Task RejectAsync(Func<Task> action, string name) { try { await action(); } catch (InvalidOperationException) { Check(true, name); return; } throw new Exception("Expected rejection: " + name); }
@@ -48,7 +49,7 @@ store.Save(settings);
 if (args.Contains("--integration"))
 {
     if (!MountManager.WinFspInstalled) throw new Exception("Install WinFsp before integration tests.");
-    var engine = Path.Combine(repo, "tools", "rclone.exe");
+    var engine = Environment.GetEnvironmentVariable("HARBORDRIVE_TEST_RCLONE") ?? Path.Combine(repo, "tools", "rclone.exe");
     var remoteRoot = Path.Combine(testRoot, "s3-server");
     Directory.CreateDirectory(Path.Combine(remoteRoot, p.Bucket));
     var portListener = new TcpListener(IPAddress.Loopback, 0); portListener.Start(); var port = ((IPEndPoint)portListener.LocalEndpoint).Port; portListener.Stop();
@@ -136,7 +137,7 @@ if (args.Contains("--integration"))
         if (args.Contains("--ui-preview"))
         {
             store.Save(new AppSettings { Profiles = [p with { AutoMount = true }] });
-            var preview = new ProcessStartInfo(Path.Combine(repo, "artifacts", "HarborDrive-win-arm64", "HarborDrive.exe")) { UseShellExecute = false };
+            var preview = new ProcessStartInfo(Environment.GetEnvironmentVariable("HARBORDRIVE_TEST_APP") ?? Path.Combine(repo, "artifacts", "HarborDrive-win-arm64", "HarborDrive.exe")) { UseShellExecute = false };
             preview.Environment["HARBORDRIVE_HOME"] = store.Root;
             using var app = Process.Start(preview)!;
             File.WriteAllText(Path.Combine(repo, ".devdata", "ui-preview.json"), JsonSerializer.Serialize(new { app.Id, Store = store.Root, TestRoot = testRoot }));

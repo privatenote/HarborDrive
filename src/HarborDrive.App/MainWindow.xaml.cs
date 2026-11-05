@@ -40,9 +40,20 @@ public partial class MainWindow : Window
     public MainWindow(AppStore store, AppSettings settings)
     {
         InitializeComponent();
+        VersionText.Text = $"v{typeof(MainWindow).Assembly.GetName().Version?.ToString(3)} · Windows {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}";
         this.store = store; this.settings = settings;
         manager = new MountManager(store, FindEngine());
-        LoginStart.IsChecked = settings.StartAtLogin;
+        try
+        {
+            using var run = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
+            settings.StartAtLogin = string.Equals(run?.GetValue("HarborDrive") as string, "\"" + Environment.ProcessPath + "\" --background", StringComparison.OrdinalIgnoreCase);
+            LoginStart.IsChecked = settings.StartAtLogin;
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+        {
+            LoginStart.IsEnabled = false;
+            LoginStart.ToolTip = "Windows 시작 설정을 읽을 수 없습니다.";
+        }
         DriveList.ItemsSource = rows;
         foreach (var p in settings.Profiles) rows.Add(new(manager.GetStatus(p)));
         if (rows.Count > 0) DriveList.SelectedIndex = 0;
@@ -87,7 +98,7 @@ public partial class MainWindow : Window
     public void ShowDashboard() { Show(); WindowState = WindowState.Normal; Activate(); }
     private void Render()
     {
-        var dependency = !File.Exists(manager.RclonePath) ? "rclone이 없습니다. scripts/setup.ps1을 실행해 주세요." : !MountManager.WinFspInstalled ? "WinFsp 설치가 필요합니다. scripts/setup.ps1 -InstallWinFsp를 실행하고 Windows 관리자 승인 창을 확인해 주세요." : "";
+        var dependency = !File.Exists(manager.RclonePath) ? "전송 엔진 파일이 없습니다. HarborDrive 설치 파일을 다시 실행해 주세요." : !MountManager.WinFspInstalled ? "드라이브 연결 구성요소가 없습니다. HarborDrive 설치 파일을 실행해 WinFsp를 설치해 주세요." : "";
         DependencyBanner.Visibility = dependency.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         DependencyText.Text = dependency;
         EmptyCard.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -139,6 +150,9 @@ public partial class MainWindow : Window
     {
         if (sender is Button button && button.ContextMenu is { } menu) { menu.PlacementTarget = button; menu.IsOpen = true; }
     }
+    private void About_Click(object sender, RoutedEventArgs e) => System.Windows.MessageBox.Show(this,
+        VersionText.Text + "\n\nHarborDrive · S3 네트워크 드라이브\n전송 엔진: rclone (MIT)\n\nWinFsp - Windows File System Proxy, Copyright (C) Bill Zissimopoulos\nhttps://github.com/winfsp/winfsp\n\n설치 폴더의 THIRD-PARTY-NOTICES.md와 licenses 폴더에서 타사 라이선스를 확인할 수 있습니다.",
+        "HarborDrive 정보", MessageBoxButton.OK, MessageBoxImage.Information);
     private void Edit_Click(object sender, RoutedEventArgs e) { if (Selected is { } p) EditProfile(p); }
     private void EditProfile(DriveProfile? original)
     {

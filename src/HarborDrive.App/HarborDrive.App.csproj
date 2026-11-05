@@ -5,10 +5,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- WPF owns the UI/DPI lifecycle; WinForms is used only for NotifyIcon. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
-    <Version>0.1.0</Version><Product>HarborDrive</Product>
+    <Version>0.1.1</Version><Product>HarborDrive</Product>
+    <RcloneExecutable Condition="'$(RcloneExecutable)' == ''">../../tools/rclone.exe</RcloneExecutable>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../HarborDrive.Core/HarborDrive.Core.csproj" /></ItemGroup>
-  <ItemGroup><None Include="../../tools/rclone.exe" Link="tools/rclone.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('../../tools/rclone.exe')" /></ItemGroup>
+  <ItemGroup><None Include="$(RcloneExecutable)" Link="tools/rclone.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('$(RcloneExecutable)')" /></ItemGroup>
   <ItemGroup><None Include="../../tools/RCLONE-LICENSE.txt" Link="tools/RCLONE-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup>
   <ItemGroup><Using Remove="System.Windows.Forms" /><Using Remove="System.Drawing" /></ItemGroup>
 </Project>
