@@ -1,0 +1,31 @@
+name: Windows build and checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - name: Unit and update checks
+        shell: pwsh
+        run: ./scripts/test.ps1
+      - name: Build application
+        shell: pwsh
+        run: ./scripts/build.ps1
+      - name: Check application resources
+        shell: pwsh
+        run: |
+          $env:HARBORDRIVE_HOME = Join-Path $env:RUNNER_TEMP 'HarborDrive-resource-check'
+          $App = Start-Process './src/HarborDrive.App/bin/Release/net10.0-windows/HarborDrive.exe' -ArgumentList '--smoke-test' -WindowStyle Hidden -PassThru
+          if (!$App.WaitForExit(30000)) { $App.Kill(); throw 'Resource check timed out.' }
+          if ($App.ExitCode -ne 0) { throw "Resource check failed: $($App.ExitCode)" }
