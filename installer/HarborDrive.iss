@@ -166,7 +166,8 @@ procedure RemoveMatchingStartupValue(Root: HKEY; const Key: String);
 var
   Value, Expected: String;
 begin
-  Expected := AddQuotes(ExpandConstant('{app}\HarborDrive.exe')) + ' --background';
+  { The app always quotes its executable, even for paths without spaces. AddQuotes only quotes when necessary for a command line. }
+  Expected := '"' + ExpandConstant('{app}\HarborDrive.exe') + '" --background';
   if RegQueryStringValue(Root, Key, 'HarborDrive', Value) then begin
     if SameText(Value, Expected) then begin
       if RegDeleteValue(Root, Key, 'HarborDrive') then Log('Removed matching HarborDrive startup value: ' + Key)
