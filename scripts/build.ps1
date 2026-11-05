@@ -15,7 +15,7 @@ try {
         foreach ($Binary in @('HarborDrive.exe', 'coreclr.dll', 'tools\rclone.exe')) {
             if ((Get-PeMachine (Join-Path $PublishPath $Binary)) -ne $ExpectedMachine) { throw "Wrong architecture in package: $Binary" }
         }
-        Copy-Item -LiteralPath (Join-Path $RepoRoot 'README.md'),(Join-Path $RepoRoot 'THIRD-PARTY-NOTICES.md') -Destination $PublishPath
+        Copy-Item -LiteralPath (Join-Path $RepoRoot 'README.md'),(Join-Path $RepoRoot 'THIRD-PARTY-NOTICES.md'),(Join-Path $RepoRoot 'LICENSE') -Destination $PublishPath
         Copy-Item -LiteralPath (Join-Path $RepoRoot 'docs') -Destination $PublishPath -Recurse -Force
         $RuntimeConfig = Get-Content -LiteralPath (Join-Path $PublishPath 'HarborDrive.runtimeconfig.json') -Raw | ConvertFrom-Json
         $RuntimeVersion = ($RuntimeConfig.runtimeOptions.includedFrameworks | Where-Object { $_.name -eq 'Microsoft.NETCore.App' }).version

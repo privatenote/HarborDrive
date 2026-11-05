@@ -5,7 +5,7 @@
   #error WinFspMsi must point to the verified official MSI
 #endif
 #ifndef AppVersion
-  #define AppVersion "0.1.1"
+  #define AppVersion "0.1.2"
 #endif
 
 [Setup]
@@ -18,6 +18,7 @@ DefaultDirName={autopf}\HarborDrive
 DefaultGroupName=HarborDrive
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\HarborDrive.exe
+SetupIconFile=..\src\HarborDrive.App\Assets\HarborDrive.ico
 OutputDir=..\artifacts
 OutputBaseFilename=HarborDrive-{#AppVersion}-x64-Setup
 SetupArchitecture=x64
@@ -161,24 +162,41 @@ begin
   end;
 end;
 
-procedure RemoveMatchingStartupEntries;
+procedure RemoveMatchingStartupValue(Root: HKEY; const Key: String);
+var
+  Value, Expected: String;
+begin
+  Expected := AddQuotes(ExpandConstant('{app}\HarborDrive.exe')) + ' --background';
+  if RegQueryStringValue(Root, Key, 'HarborDrive', Value) then begin
+    if SameText(Value, Expected) then begin
+      if RegDeleteValue(Root, Key, 'HarborDrive') then Log('Removed matching HarborDrive startup value: ' + Key)
+      else Log('Could not remove matching HarborDrive startup value: ' + Key);
+    end else Log('Preserved HarborDrive startup value pointing to a different installation.');
+  end;
+end;
+
+procedure RemoveMatchingUserStartupEntries(Root: HKEY);
 var
   UserKeys: TArrayOfString;
   I: Integer;
-  Key, Value, Expected: String;
 begin
-  Expected := AddQuotes(ExpandConstant('{app}\HarborDrive.exe')) + ' --background';
-  if not RegGetSubkeyNames(HKU, '', UserKeys) then Exit;
+  if not RegGetSubkeyNames(Root, '', UserKeys) then begin
+    Log('Could not enumerate loaded user startup keys.');
+    Exit;
+  end;
   for I := 0 to GetArrayLength(UserKeys) - 1 do begin
-    Key := UserKeys[I] + '\Software\Microsoft\Windows\CurrentVersion\Run';
-    if RegQueryStringValue(HKU, Key, 'HarborDrive', Value) and SameText(Value, Expected) then begin
-      if not RegDeleteValue(HKU, Key, 'HarborDrive') then Log('Could not remove startup entry for ' + UserKeys[I]);
-    end;
+    RemoveMatchingStartupValue(Root, UserKeys[I] + '\Software\Microsoft\Windows\CurrentVersion\Run');
   end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-  if CurUninstallStep = usUninstall then RemoveMatchingStartupEntries;
+  if CurUninstallStep = usUninstall then begin
+    { Explicit views also cover x64 emulation on ARM64. Never delete the Run key. }
+    RemoveMatchingStartupValue(HKCU64, 'Software\Microsoft\Windows\CurrentVersion\Run');
+    RemoveMatchingStartupValue(HKCU32, 'Software\Microsoft\Windows\CurrentVersion\Run');
+    RemoveMatchingUserStartupEntries(HKU64);
+    RemoveMatchingUserStartupEntries(HKU32);
+  end;
   { WinFsp and per-user settings, credentials, logs and VFS caches are shared or user data. Never remove them here. }
 end;

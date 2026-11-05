@@ -46,6 +46,21 @@ File.WriteAllText(Path.Combine(store.Root, "settings.json"), "{bad");
 try { store.Load(); throw new Exception("Corrupt settings accepted"); } catch (JsonException) { Check(true, "corrupt settings fail without overwriting"); }
 store.Save(settings);
 
+async Task<UpdateCheck> CheckRelease(string body, HttpStatusCode status = HttpStatusCode.OK)
+{
+    using var client = new GitHubUpdates(new FixedResponseHandler(body, status));
+    return await client.Check(new Version(0, 1, 2, 0));
+}
+Check(GitHubUpdates.TryVersion("v0.1.2", out var normalized) && normalized == new Version(0, 1, 2, 0), "normalize release tag and assembly version");
+Check(!GitHubUpdates.TryVersion("v0.1.3-beta.1", out _), "reject prerelease version tag");
+Check((await CheckRelease("{}", HttpStatusCode.NotFound)).State == UpdateState.NotPublished, "missing release is not reported as up to date");
+Check((await CheckRelease("""{"draft":false,"prerelease":false,"tag_name":"v0.1.2","assets":[]}""")).State == UpdateState.UpToDate, "same three-part version is up to date");
+Check((await CheckRelease("""{"draft":false,"prerelease":false,"tag_name":"v0.1.3","assets":[{"name":"HarborDrive-0.1.3-x64-Setup.exe"}]}""")).State == UpdateState.Available, "detect newer release with matching installer");
+Check((await CheckRelease("""{"draft":false,"prerelease":false,"tag_name":"v0.1.3","assets":[]}""")).State == UpdateState.PackageMissing, "do not announce release before installer is attached");
+Check((await CheckRelease("""{"draft":false,"prerelease":true}""")).State == UpdateState.NotPublished, "ignore prerelease channel");
+try { await CheckRelease("{}", HttpStatusCode.Forbidden); throw new Exception("Rate limit was accepted"); }
+catch (HttpRequestException) { Check(true, "API failure cannot masquerade as latest version"); }
+
 if (args.Contains("--integration"))
 {
     if (!MountManager.WinFspInstalled) throw new Exception("Install WinFsp before integration tests.");
@@ -153,3 +168,12 @@ if (args.Contains("--integration"))
     }
 }
 Console.WriteLine($"All {count} checks passed. Evidence: {testRoot}");
+
+sealed class FixedResponseHandler(string body, HttpStatusCode status) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        if (request.RequestUri?.Host != "api.github.com" || request.Method != HttpMethod.Get) throw new Exception("Unexpected update request");
+        return Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
+    }
+}

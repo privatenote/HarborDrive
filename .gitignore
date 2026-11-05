@@ -8,3 +8,4 @@ tools/*.msi
 *.user
 *.log
 .vs/
+node_modules/

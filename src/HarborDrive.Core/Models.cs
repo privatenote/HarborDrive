@@ -44,6 +44,7 @@ public sealed class AppSettings
 {
     public int Version { get; set; } = 1;
     public bool StartAtLogin { get; set; }
+    public bool CheckForUpdates { get; set; } = true;
     public List<DriveProfile> Profiles { get; set; } = [];
 }
 public sealed record QueueEntry(long Id, string Name, long Size, int Tries, bool Uploading);

@@ -28,6 +28,9 @@ public partial class MainWindow : Window
     private readonly MountManager manager;
     private readonly ObservableCollection<DriveRow> rows = [];
     private readonly Forms.NotifyIcon tray;
+    private readonly TrayIconSet trayIcons;
+    private readonly GitHubUpdates updates = new();
+    private bool checkingUpdates;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(2) };
     private bool busy;
     private bool exiting;
@@ -42,6 +45,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         VersionText.Text = $"v{typeof(MainWindow).Assembly.GetName().Version?.ToString(3)} · Windows {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}";
         this.store = store; this.settings = settings;
+        AutoUpdatesMenu.IsChecked = settings.CheckForUpdates;
         manager = new MountManager(store, FindEngine());
         try
         {
@@ -57,7 +61,8 @@ public partial class MainWindow : Window
         DriveList.ItemsSource = rows;
         foreach (var p in settings.Profiles) rows.Add(new(manager.GetStatus(p)));
         if (rows.Count > 0) DriveList.SelectedIndex = 0;
-        tray = new Forms.NotifyIcon { Text = "HarborDrive", Icon = System.Drawing.SystemIcons.Application, Visible = true };
+        trayIcons = new TrayIconSet();
+        tray = new Forms.NotifyIcon { Text = "HarborDrive", Icon = trayIcons.Disconnected, Visible = true };
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("HarborDrive 열기", null, (_, _) => Dispatcher.Invoke(ShowDashboard));
         menu.Items.Add("모든 연결 해제 후 종료", null, (_, _) => Dispatcher.Invoke(async () => await ExitApp()));
@@ -81,6 +86,7 @@ public partial class MainWindow : Window
             try { await manager.Initialize(settings.Profiles); }
             catch (Exception e) { ShowError(e); }
             finally { initializing = false; Render(); timer.Start(); }
+            if (settings.CheckForUpdates) await CheckUpdates(false);
         });
         Render();
     }
@@ -110,6 +116,7 @@ public partial class MainWindow : Window
                 tray.ShowBalloonTip(3000, row.Name + " · 확인 필요", row.Status.Message.Length > 220 ? row.Status.Message[..220] : row.Status.Message, Forms.ToolTipIcon.Warning);
             lastStates[row.Status.Profile.Id] = row.Status.State;
         }
+        if (tray != null) tray.Icon = trayIcons.For(rows.Select(row => row.Status));
         if (Selected is not { } p) return;
         var status = manager.GetStatus(p); var s = status.Snapshot;
         LetterText.Text = p.MountPoint; NameText.Text = p.Name;
@@ -151,8 +158,59 @@ public partial class MainWindow : Window
         if (sender is Button button && button.ContextMenu is { } menu) { menu.PlacementTarget = button; menu.IsOpen = true; }
     }
     private void About_Click(object sender, RoutedEventArgs e) => System.Windows.MessageBox.Show(this,
-        VersionText.Text + "\n\nHarborDrive · S3 네트워크 드라이브\n전송 엔진: rclone (MIT)\n\nWinFsp - Windows File System Proxy, Copyright (C) Bill Zissimopoulos\nhttps://github.com/winfsp/winfsp\n\n설치 폴더의 THIRD-PARTY-NOTICES.md와 licenses 폴더에서 타사 라이선스를 확인할 수 있습니다.",
+        VersionText.Text + "\n\nHarborDrive · S3 네트워크 드라이브 (MIT)\nhttps://github.com/privatenote/HarborDrive\n전송 엔진: rclone (MIT)\n\nWinFsp - Windows File System Proxy, Copyright (C) Bill Zissimopoulos\nhttps://github.com/winfsp/winfsp\n\n설치 폴더의 LICENSE, THIRD-PARTY-NOTICES.md와 licenses 폴더에서 라이선스를 확인할 수 있습니다.",
         "HarborDrive 정보", MessageBoxButton.OK, MessageBoxImage.Information);
+    private async void UpdateCheck_Click(object sender, RoutedEventArgs e) => await CheckUpdates(true);
+    private void UpdateRelease_Click(object sender, RoutedEventArgs e) => OpenReleasePage();
+    private void OpenReleasePage()
+    {
+        try { Process.Start(new ProcessStartInfo(GitHubUpdates.ReleasePage.AbsoluteUri) { UseShellExecute = true }); }
+        catch (Exception ex) { ShowError(ex); }
+    }
+    private async Task CheckUpdates(bool manual)
+    {
+        if (checkingUpdates || exiting) return;
+        checkingUpdates = true; UpdateMenu.IsEnabled = false;
+        try
+        {
+            var current = typeof(MainWindow).Assembly.GetName().Version!;
+            var result = await updates.Check(current);
+            if (exiting) return;
+            if (result.State == UpdateState.Available)
+            {
+                var version = result.Version!.ToString(3);
+                UpdateNoticeText.Text = $"HarborDrive {version} 업데이트를 사용할 수 있습니다.";
+                UpdateNotice.Visibility = Visibility.Visible;
+                UpdateMenu.Header = $"새 버전 {version} · 업데이트 확인…";
+                if (manual)
+                {
+                    if (System.Windows.MessageBox.Show(this, $"새 버전 {version}이 있습니다.\n\nGitHub에서 설치 파일을 받은 뒤, 이 앱에서 '모든 연결 해제 후 종료'를 선택하고 설치하세요. 설정과 캐시는 유지됩니다.\n\n릴리스 페이지를 열까요?", "HarborDrive 업데이트", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes) OpenReleasePage();
+                }
+                else tray.ShowBalloonTip(4000, "HarborDrive 업데이트", $"새 버전 {version}이 있습니다. 앱의 설정 메뉴에서 확인하세요.", Forms.ToolTipIcon.Info);
+            }
+            else if (manual)
+            {
+                var message = result.State switch
+                {
+                    UpdateState.NotPublished => "아직 등록된 정식 배포가 없습니다.",
+                    UpdateState.PackageMissing => "새 버전이 등록되었지만 x64 설치 파일은 아직 준비되지 않았습니다.",
+                    _ => "현재 버전이 최신 버전입니다."
+                };
+                System.Windows.MessageBox.Show(this, message, "HarborDrive 업데이트", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (manual && !exiting) ShowError(new IOException("업데이트를 확인하지 못했습니다. 네트워크 연결 또는 GitHub 요청 제한을 확인해 주세요.\n\n" + ex.Message));
+        }
+        finally { checkingUpdates = false; UpdateMenu.IsEnabled = true; }
+    }
+    private void AutoUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        var previous = settings.CheckForUpdates;
+        try { settings.CheckForUpdates = AutoUpdatesMenu.IsChecked; store.Save(settings); }
+        catch (Exception ex) { settings.CheckForUpdates = previous; AutoUpdatesMenu.IsChecked = previous; ShowError(ex); }
+    }
     private void Edit_Click(object sender, RoutedEventArgs e) { if (Selected is { } p) EditProfile(p); }
     private void EditProfile(DriveProfile? original)
     {
@@ -212,13 +270,14 @@ public partial class MainWindow : Window
         catch (Exception ex) { LoginStart.IsChecked = settings.StartAtLogin; ShowError(ex); }
     }
     private async void Exit_Click(object sender, RoutedEventArgs e) => await ExitApp();
+    internal Task FinishSmokeTest() => ExitApp();
     private async Task ExitApp()
     {
         if (busy || initializing) return;
         await Run(async () =>
         {
             foreach (var p in settings.Profiles) if (manager.IsManaged(p.Id)) await manager.Disconnect(p);
-            exiting = true; timer.Stop(); tray.Visible = false; tray.Dispose(); manager.Dispose();
+            exiting = true; timer.Stop(); tray.Visible = false; tray.Dispose(); trayIcons.Dispose(); updates.Dispose(); manager.Dispose();
             System.Windows.Application.Current.Shutdown();
         });
     }

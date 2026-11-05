@@ -1,0 +1,53 @@
+name: Build and release Windows x64
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build (for example v0.1.2)
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - name: Validate version tag
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          [xml]$Project = Get-Content src/HarborDrive.App/HarborDrive.App.csproj -Raw
+          $Version = [string]$Project.Project.PropertyGroup.Version
+          if ($env:RELEASE_TAG -cne "v$Version") { throw 'The Git tag must match the app version.' }
+          if (!(Test-Path "docs/releases/$Version.md")) { throw 'Release notes are missing.' }
+          "APP_VERSION=$Version" >> $env:GITHUB_ENV
+      - name: Run unit and update checks
+        shell: pwsh
+        run: ./scripts/test.ps1
+      - name: Build offline installer
+        shell: pwsh
+        run: ./scripts/build-installer.ps1
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $Setup = "artifacts/HarborDrive-$env:APP_VERSION-x64-Setup.exe"
+          gh release create $env:RELEASE_TAG $Setup "$Setup.sha256" --repo $env:GITHUB_REPOSITORY --verify-tag --title "HarborDrive $env:APP_VERSION" --notes-file "docs/releases/$env:APP_VERSION.md" --latest
+          if ($LASTEXITCODE) { throw 'GitHub release publication failed.' }

@@ -4,7 +4,7 @@
     <Border Background="#142D3A" Padding="22,30,22,22">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top">
-          <TextBlock Text="◒  HarborDrive" Foreground="White" FontSize="24" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal"><Image Source="Assets/HarborDrive.png" Width="32" Height="32" Margin="0,0,10,0" /><TextBlock Text="HarborDrive" Foreground="White" FontSize="23" FontWeight="SemiBold" VerticalAlignment="Center" /></StackPanel>
           <TextBlock Text="YOUR CLOUD, WITHIN REACH" Foreground="#86ADB9" FontSize="9" Margin="2,9,0,34" />
           <TextBlock Text="내 드라이브" Foreground="#96B5C2" FontSize="12" Margin="0,0,0,12" />
           <TextBlock Text="탐색기와 연결된 S3" Foreground="#668E9F" FontSize="11" Margin="0,0,0,20" />
@@ -13,7 +13,7 @@
           <TextBlock Text="백그라운드에서 안전하게" Foreground="#D0E1E7" FontSize="12" />
           <TextBlock Text="창을 닫아도 연결은 유지됩니다." Foreground="#87A6B4" FontSize="11" Margin="0,5,0,20" />
           <Button Content="⚙  설정" Click="Settings_Click" Background="#233F4E" Foreground="White" BorderThickness="0" Margin="0,0,0,8">
-            <Button.ContextMenu><ContextMenu><MenuItem Header="현재 S3 연결 설정" Click="Edit_Click" /><MenuItem Header="추가 S3 연결…" Click="Add_Click" /><Separator /><MenuItem Header="로그 폴더 열기" Click="Logs_Click" /><MenuItem Header="정보 · 타사 라이선스" Click="About_Click" /></ContextMenu></Button.ContextMenu>
+            <Button.ContextMenu><ContextMenu><MenuItem Header="현재 S3 연결 설정" Click="Edit_Click" /><MenuItem Header="추가 S3 연결…" Click="Add_Click" /><Separator /><MenuItem x:Name="UpdateMenu" Header="업데이트 확인…" Click="UpdateCheck_Click" /><MenuItem x:Name="AutoUpdatesMenu" Header="앱 시작 시 업데이트 확인" IsCheckable="True" Click="AutoUpdates_Click" /><Separator /><MenuItem Header="로그 폴더 열기" Click="Logs_Click" /><MenuItem Header="정보 · 타사 라이선스" Click="About_Click" /></ContextMenu></Button.ContextMenu>
           </Button>
           <Button Content="모든 연결 해제 후 종료" Click="Exit_Click" Background="Transparent" Foreground="#AFC8D2" BorderThickness="0" FontSize="11" Margin="0" />
           <TextBlock x:Name="VersionText" Foreground="#678C9F" FontSize="10" Margin="0,18,0,0" />
@@ -30,6 +30,7 @@
           <CheckBox x:Name="LoginStart" Content="Windows 로그인 시 실행" DockPanel.Dock="Right" Click="LoginStart_Click" FontSize="12" Foreground="{StaticResource Muted}" />
           <StackPanel><TextBlock Text="클라우드 드라이브" FontSize="27" FontWeight="SemiBold" /><TextBlock Text="S3를 탐색기에서. 전송 상태는 한눈에." Foreground="{StaticResource Muted}" Margin="0,7,0,0" /></StackPanel>
         </DockPanel>
+        <Border x:Name="UpdateNotice" Visibility="Collapsed" Background="#E0F2EF" CornerRadius="7" Padding="14" Margin="0,0,0,16"><DockPanel><Button Content="릴리스 보기 ↗" Click="UpdateRelease_Click" DockPanel.Dock="Right" Padding="12,6" Margin="12,0,0,0" /><TextBlock x:Name="UpdateNoticeText" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="#175C59" /></DockPanel></Border>
         <Border x:Name="DependencyBanner" Background="#FFF0D4" CornerRadius="7" Padding="14" Margin="0,0,0,16"><TextBlock x:Name="DependencyText" TextWrapping="Wrap" Foreground="#79551C" /></Border>
         <Border x:Name="EmptyCard" Style="{StaticResource Card}" Padding="36" Margin="0,0,0,20">
           <StackPanel><TextBlock Text="클라우드에 닿는 가장 익숙한 방법" FontSize="25" FontWeight="SemiBold" Margin="0,4,0,14" /><TextBlock Text="S3 버킷과 드라이브 문자를 연결하세요.&#10;파일을 열고 저장하면 백그라운드에서 S3로 전송합니다." Foreground="{StaticResource Muted}" LineHeight="25" /><Button Content="첫 번째 드라이브 연결하기  →" Click="Add_Click" Style="{StaticResource Primary}" HorizontalAlignment="Left" Margin="0,26,0,16" /><TextBlock Text="01   S3 인증 설정        02   버킷·경로 선택        03   드라이브 연결" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,8,0,0" /></StackPanel>

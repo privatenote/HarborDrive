@@ -19,9 +19,24 @@ Start-Transcript -LiteralPath $Transcript -Force | Out-Null
 $EngineProcess = $null
 $AppProcess = $null
 $RunKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
-$PreviousRun = Get-ItemPropertyValue -LiteralPath $RunKey -Name HarborDrive -ErrorAction SilentlyContinue
+$RunRegistryPath = 'HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run'
+$PreviousRun = [Microsoft.Win32.Registry]::GetValue($RunRegistryPath, 'HarborDrive', $null)
+$BeforeRunKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Run')
+$OtherStartupValues = @{}
+if ($BeforeRunKey) {
+    try { foreach ($Name in $BeforeRunKey.GetValueNames()) { if ($Name -ne 'HarborDrive') { $OtherStartupValues[$Name] = $BeforeRunKey.GetValue($Name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) } } }
+    finally { $BeforeRunKey.Dispose() }
+}
+$OtherStartupValues | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $TestRoot 'startup-values-before.json') -Encoding utf8
 $WinFspDirectory = Get-ItemPropertyValue 'HKLM:\SOFTWARE\WOW6432Node\WinFsp' -Name InstallDir -ErrorAction SilentlyContinue
 $CheckCount = 0
+function Set-RunValue($Value) {
+    $StartupKey = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Microsoft\Windows\CurrentVersion\Run')
+    try {
+        if ($null -eq $Value) { $StartupKey.DeleteValue('HarborDrive', $false) }
+        else { $StartupKey.SetValue('HarborDrive', $Value, [Microsoft.Win32.RegistryValueKind]::String) }
+    } finally { $StartupKey.Dispose() }
+}
 function Check([bool]$Condition, [string]$Name) {
     if (!$Condition) { throw "FAIL: $Name" }
     Write-Host "PASS: $Name"
@@ -55,6 +70,13 @@ try {
     Check (!$EngineProcess.HasExited) 'blocked operations do not terminate engine'
     $EngineProcess.Kill(); $EngineProcess.WaitForExit(); $EngineProcess.Dispose(); $EngineProcess = $null
     Check ((Run-Setup 'repeat-install') -in @(0,3010)) 'repeat install succeeds without reinstalling shared driver'
+    $SmokeInfo = [System.Diagnostics.ProcessStartInfo]::new((Join-Path $InstallDir 'HarborDrive.exe'))
+    $SmokeInfo.UseShellExecute = $false; $SmokeInfo.CreateNoWindow = $true; $SmokeInfo.Environment['HARBORDRIVE_HOME'] = $UserData
+    $SmokeInfo.ArgumentList.Add('--smoke-test')
+    $AppProcess = [System.Diagnostics.Process]::Start($SmokeInfo)
+    if (!$AppProcess.WaitForExit(20000)) { throw 'App resource smoke check timed out.' }
+    Check ($AppProcess.ExitCode -eq 0) 'installed app loads window and all tray icon resources'
+    $AppProcess.Dispose(); $AppProcess = $null
     $AppInfo = [System.Diagnostics.ProcessStartInfo]::new((Join-Path $InstallDir 'HarborDrive.exe'))
     $AppInfo.UseShellExecute = $false; $AppInfo.CreateNoWindow = $true; $AppInfo.Environment['HARBORDRIVE_HOME'] = $UserData
     $AppInfo.ArgumentList.Add('--background')
@@ -64,13 +86,18 @@ try {
     Check ((Run-Uninstall 'running-app-uninstall-blocked') -ne 0) 'uninstall refuses a live app'
     # This app uses a new empty test profile, with no drives or user data open.
     $AppProcess.Kill(); $AppProcess.WaitForExit(); $AppProcess.Dispose(); $AppProcess = $null
-    New-Item -Path $RunKey -Force | Out-Null
-    Set-ItemProperty -LiteralPath $RunKey -Name HarborDrive -Value ('"' + (Join-Path $InstallDir 'HarborDrive.exe') + '" --background')
+    Set-RunValue ('"' + (Join-Path $InstallDir 'HarborDrive.exe') + '" --background')
     Check ((Run-Uninstall 'clean-uninstall') -eq 0) 'clean uninstall succeeds'
     Check (!(Test-Path -LiteralPath (Join-Path $InstallDir 'HarborDrive.exe'))) 'installed app removed'
     Check (!(Test-Path -LiteralPath $UninstallKey)) 'uninstall registration removed'
     Check (Test-Path -LiteralPath $Sentinel) 'user cache retained'
-    Check (!(Get-ItemPropertyValue -LiteralPath $RunKey -Name HarborDrive -ErrorAction SilentlyContinue)) 'matching startup entry removed'
+    Check ($null -eq [Microsoft.Win32.Registry]::GetValue($RunRegistryPath, 'HarborDrive', $null)) 'matching startup entry removed'
+    $AfterRunKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Run')
+    try {
+        foreach ($Name in $OtherStartupValues.Keys) {
+            Check ($AfterRunKey -and ($AfterRunKey.GetValue($Name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) -eq $OtherStartupValues[$Name])) "unrelated startup value retained: $Name"
+        }
+    } finally { if ($AfterRunKey) { $AfterRunKey.Dispose() } }
     if ($WinFspDirectory) { Check (Test-Path -LiteralPath (Join-Path $WinFspDirectory 'bin\winfsp-x64.dll')) 'shared WinFsp preserved' }
     Write-Host "All $CheckCount installer checks passed. Evidence: $TestRoot"
 } catch {
@@ -78,7 +105,6 @@ try {
     throw
 } finally {
     foreach ($OwnedProcess in @($EngineProcess,$AppProcess)) { if ($OwnedProcess -and !$OwnedProcess.HasExited) { $OwnedProcess.Kill(); $OwnedProcess.WaitForExit() }; if ($OwnedProcess) { $OwnedProcess.Dispose() } }
-    if ($null -ne $PreviousRun) { Set-ItemProperty -LiteralPath $RunKey -Name HarborDrive -Value $PreviousRun }
-    else { Remove-ItemProperty -LiteralPath $RunKey -Name HarborDrive -ErrorAction SilentlyContinue }
+    Set-RunValue $PreviousRun
     Stop-Transcript | Out-Null
 }

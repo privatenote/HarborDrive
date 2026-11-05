@@ -2,9 +2,11 @@
 
 Windows에서 Amazon S3 / S3 호환 스토리지를 탐색기 네트워크 드라이브로 연결하는 독립 데스크톱 앱입니다. .NET 10 WPF + rclone + WinFsp를 사용합니다. 기존 프로그램을 수정하지 않고 지정한 드라이브 문자로 파일을 읽고 저장합니다.
 
+[최신 설치 파일](https://github.com/privatenote/HarborDrive/releases/latest) · [업데이트 방식](docs/updates.md) · [MIT / 타사 라이선스](docs/licensing.md)
+
 ## 바로 실행
 
-Intel / AMD 64비트 Windows용 통합 설치 파일: **`artifacts/HarborDrive-0.1.1-x64-Setup.exe`**
+Intel / AMD 64비트 Windows용 통합 설치 파일: **`artifacts/HarborDrive-0.1.2-x64-Setup.exe`**
 
 설치 파일 하나를 배포해 실행하면 됩니다. .NET 런타임·x64 rclone·공식 WinFsp MSI가 모두 들어 있어 설치 중 추가 다운로드가 없습니다. Windows 관리자 승인이 필요하며, 호환 WinFsp가 이미 설치되어 있으면 재사용합니다. 시작 메뉴에서 HarborDrive를 일반 사용자 권한으로 실행하세요.
 
@@ -15,7 +17,7 @@ Intel / AMD 64비트 Windows용 통합 설치 파일: **`artifacts/HarborDrive-0
 3. **연결 확인**으로 현재 경로를 읽을 수 있는지 검사하고 **연결 저장 → 드라이브 연결**을 누릅니다. 버킷 목록 권한이 없어도 이름을 직접 입력할 수 있습니다.
 4. 탐색기에서 지정한 드라이브를 사용합니다. 전송 대기열과 로그는 앱에서 확인합니다.
 
-WinFsp는 이 PC에 설치했습니다. 다른 PC에서는 관리자 권한으로 WinFsp 2.1 이상을 먼저 설치해야 합니다. 앱 자체는 관리자 권한으로 실행하지 마세요. 관리자 세션과 일반 탐색기는 서로 다른 드라이브를 볼 수 있습니다.
+portable 버전은 WinFsp 2.1 이상이 필요합니다. 통합 설치 파일은 WinFsp가 필요하면 함께 설치합니다. 앱 자체는 일반 사용자 권한으로 실행하세요. 관리자 세션과 일반 탐색기는 서로 다른 드라이브를 볼 수 있습니다.
 
 평소에는 기본 연결 하나만 사용하면 됩니다. 추가 연결은 **설정 → 추가 S3 연결…**에 있습니다. 연결마다 고유한 드라이브 문자를 사용합니다.
 
@@ -72,7 +74,7 @@ AWS 기본 인증 체인은 rclone/AWS SDK가 지원하는 환경 변수, 공유
 - 캐시 용량과 최소 여유 공간은 정리 목표입니다. 사용 중·미전송 파일은 정리하지 않아 목표를 초과할 수 있습니다. 로컬 디스크 여유 공간을 확보하세요.
 - DB, VM 이미지, 다중 작성자 공유 작업처럼 로컬 디스크의 모든 의미론이 필요한 용도에 대한 호환성은 검증하지 않았습니다.
 - ARM64와 x64 실행 검사를 수행했습니다. x64 검사는 ARM64 Windows의 x64 에뮬레이션 환경이며, Intel / AMD 실물 PC와 실제 AWS 계정 시험은 남아 있습니다.
-- x64 통합 설치·제거를 제공합니다. 코드 서명과 자동 업데이트는 아직 포함하지 않습니다.
+- x64 통합 설치·제거와 GitHub 정식 릴리스 업데이트 감지를 제공합니다. 설치 파일 자동 실행과 코드 서명은 아직 포함하지 않습니다.
 
 ## 개발·테스트·배포
 
@@ -99,5 +101,9 @@ x64 portable 패키지는 `build.ps1 -Publish -Architecture x64`, 통합 설치 
 `src/HarborDrive.Core`는 UI와 분리된 연결 관리·상태 조회·복구·보호 저장소입니다. `src/HarborDrive.App`은 WPF/트레이 UI이고, `tests/HarborDrive.Tests`는 외부 테스트 프레임워크 없이 실행 가능한 실제 동작 검증 프로그램입니다.
 
 [검증 기록](docs/validation.md) · [타사 라이선스](THIRD-PARTY-NOTICES.md)
+
+앱·설치 프로그램·트레이에 직접 제작한 아이콘을 사용합니다. 트레이는 연결 해제·연결·전송·오류 상태를 구분합니다. 벡터 원본은 `src/HarborDrive.App/Assets/*.svg`이며, Node.js와 sharp가 설치된 개발 환경에서 `node scripts/create-icons.cjs`로 여러 크기의 ICO/PNG를 재생성할 수 있습니다. 생성 파일을 소스에 포함하므로 일반 .NET 빌드에는 Node.js가 필요하지 않습니다.
+
+HarborDrive 코드와 직접 제작한 아이콘은 [MIT](LICENSE)입니다. 타사 구성요소는 원래 라이선스를 유지합니다. WinFsp - Windows File System Proxy, Copyright (C) Bill Zissimopoulos. https://github.com/winfsp/winfsp
 
 기반 동작은 [rclone Windows mount/VFS 문서](https://rclone.org/commands/rclone_mount/), [rclone RC API](https://rclone.org/rc/), [WinFsp ARM64 지원](https://github.com/winfsp/winfsp/wiki/WinFsp-on-ARM64)을 참고했습니다.
