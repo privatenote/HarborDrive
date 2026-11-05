@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.tools/
+.devdata/
+artifacts/
+tools/rclone.exe
+tools/*.msi
+*.user
+*.log
+.vs/

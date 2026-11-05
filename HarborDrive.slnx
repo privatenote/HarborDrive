@@ -1,0 +1,4 @@
+<Solution>
+  <Folder Name="/src/"><Project Path="src/HarborDrive.Core/HarborDrive.Core.csproj" /><Project Path="src/HarborDrive.App/HarborDrive.App.csproj" /></Folder>
+  <Folder Name="/tests/"><Project Path="tests/HarborDrive.Tests/HarborDrive.Tests.csproj" /></Folder>
+</Solution>
