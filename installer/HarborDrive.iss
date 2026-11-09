@@ -5,7 +5,7 @@
   #error WinFspMsi must point to the verified official MSI
 #endif
 #ifndef AppVersion
-  #define AppVersion "0.1.2"
+  #define AppVersion "0.1.3"
 #endif
 
 [Setup]

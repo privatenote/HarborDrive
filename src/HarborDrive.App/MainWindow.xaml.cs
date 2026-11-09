@@ -245,9 +245,14 @@ public partial class MainWindow : Window
         if (System.Windows.MessageBox.Show(this, "파일을 사용하는 프로그램을 먼저 닫아 주세요.\n\n미전송 파일은 로컬 캐시에 남기고 연결을 해제합니다. 같은 연결을 다시 시작하면 전송을 재개합니다. 캐시 폴더를 지우거나 경로를 바꾸지 마세요.\n\n중지할까요?", "캐시 보존 후 중지", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes) await Run(() => manager.Disconnect(p, true));
     }
     private void OpenPath(string path) { try { Process.Start(new ProcessStartInfo("explorer.exe") { ArgumentList = { path }, UseShellExecute = true }); } catch (Exception e) { ShowError(e); } }
+    private void OpenLocalDirectory(string path)
+    {
+        try { Directory.CreateDirectory(path); OpenPath(LocalDirectoryPath.Resolve(path)); }
+        catch (Exception e) { ShowError(e); }
+    }
     private void Open_Click(object sender, RoutedEventArgs e) { if (Selected is { } p) OpenPath(p.MountPoint + "\\"); }
-    private void Cache_Click(object sender, RoutedEventArgs e) { if (Selected is { } p) { Directory.CreateDirectory(store.CachePath(p)); OpenPath(store.CachePath(p)); } }
-    private void Logs_Click(object sender, RoutedEventArgs e) => OpenPath(store.Logs);
+    private void Cache_Click(object sender, RoutedEventArgs e) { if (Selected is { } p) OpenLocalDirectory(store.CachePath(p)); }
+    private void Logs_Click(object sender, RoutedEventArgs e) => OpenLocalDirectory(store.Logs);
     private void RefreshLog_Click(object sender, RoutedEventArgs e) => RefreshLog();
     private void DriveList_SelectionChanged(object sender, SelectionChangedEventArgs e) { lastLog = DateTimeOffset.MinValue; if (manager != null) Render(); }
     private void Delete_Click(object sender, RoutedEventArgs e)

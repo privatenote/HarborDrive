@@ -1,12 +1,12 @@
 # Windows x64 통합 설치
 
-배포 파일: `HarborDrive-0.1.2-x64-Setup.exe`
+배포 파일: `HarborDrive-0.1.3-x64-Setup.exe`
 
 이 파일 하나만 회사 PC에 전달하면 됩니다. x64는 x86-64 / x86_64 / AMD64와 같은 64비트 명령어 아키텍처를 가리키는 Windows/.NET 표기입니다. Intel과 AMD 64비트 Windows PC에 사용합니다. 32비트 Windows(x86)는 설치 대상이 아닙니다. Windows 11 ARM64에서도 x64 에뮬레이션으로 실행할 수 있습니다.
 
 ## 설치 내용
 
-- HarborDrive 0.1.2, x64 .NET 10 런타임, x64 rclone 1.75.2를 설치합니다. .NET 별도 설치나 설치 중 인터넷 접속이 필요하지 않습니다.
+- HarborDrive 0.1.3, x64 .NET 10 런타임, x64 rclone 1.75.2를 설치합니다. .NET 별도 설치나 설치 중 인터넷 접속이 필요하지 않습니다.
 - 공식 WinFsp 2.1.25156 MSI를 내장합니다. x64 DLL 버전이 2.1 이상이면 재사용하고, 없거나 오래되었으면 공식 MSI를 실행합니다. WinFsp의 서명과 SHA256을 빌드에서 확인하고, 실행 시 내장 MSI 해시를 다시 확인합니다.
 - 기본 앱 경로는 `%ProgramFiles%\HarborDrive`입니다. 모든 사용자용 시작 메뉴와 선택적인 바탕화면 바로가기를 만듭니다.
 - S3 인증 정보는 설치 파일에 포함하지 않습니다. 각 Windows 사용자가 앱에서 자신의 연결을 설정합니다.
@@ -35,7 +35,7 @@ Windows 설정의 설치된 앱에서 HarborDrive를 제거할 수 있습니다.
 관리자 권한으로 실행합니다.
 
 ```powershell
-.\HarborDrive-0.1.2-x64-Setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /RESTARTEXITCODE=3010 /LOG="C:\Temp\HarborDrive-install.log"
+.\HarborDrive-0.1.3-x64-Setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /RESTARTEXITCODE=3010 /LOG="C:\Temp\HarborDrive-install.log"
 ```
 
 성공은 종료 코드 0, 설치가 성공했지만 재시작이 필요하면 3010입니다. 그 외 코드는 실패이며 설치 로그를 확인해야 합니다. 앱 또는 엔진이 실행 중이라 설치 준비 단계에서 중단되면 Inno Setup의 준비 단계 실패 코드가 반환됩니다. 무인 설치는 앱을 자동 실행하지 않습니다.

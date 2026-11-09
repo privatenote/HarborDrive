@@ -6,7 +6,7 @@ Windows에서 Amazon S3 / S3 호환 스토리지를 탐색기 네트워크 드�
 
 ## 바로 실행
 
-Intel / AMD 64비트 Windows용 통합 설치 파일: **`artifacts/HarborDrive-0.1.2-x64-Setup.exe`**
+Intel / AMD 64비트 Windows용 통합 설치 파일: **`artifacts/HarborDrive-0.1.3-x64-Setup.exe`**
 
 설치 파일 하나를 배포해 실행하면 됩니다. .NET 런타임·x64 rclone·공식 WinFsp MSI가 모두 들어 있어 설치 중 추가 다운로드가 없습니다. Windows 관리자 승인이 필요하며, 호환 WinFsp가 이미 설치되어 있으면 재사용합니다. 시작 메뉴에서 HarborDrive를 일반 사용자 권한으로 실행하세요.
 

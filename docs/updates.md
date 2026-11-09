@@ -22,9 +22,9 @@
 3. 변경 사항을 커밋·push하고 일치하는 버전 태그를 push합니다.
 
 ```powershell
-git tag v0.1.2
+git tag v0.1.3
 git push origin main
-git push origin v0.1.2
+git push origin v0.1.3
 ```
 
 `.github/workflows/release.yml`이 Windows x64에서 검사 → 통합 설치 파일 빌드 → GitHub Release와 SHA256 첨부를 수행합니다. CI는 저장소의 `GITHUB_TOKEN`을 사용하므로 개발 PC에 별도 GitHub API 토큰을 보관할 필요가 없습니다. Git push는 등록된 SSH 키로 할 수 있습니다.
